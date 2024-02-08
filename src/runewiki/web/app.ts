@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 import fs from 'fs';
 import path from 'path';
 
@@ -39,7 +41,7 @@ await registerAll('src/runewiki/web/routes', '#runewiki/web/routes');
 
 try {
     await fastify.listen({
-        port: 3000,
+        port: (process.env.WEB_PORT ?? 3000) as number,
         host: '0.0.0.0'
     });
 } catch (err) {
