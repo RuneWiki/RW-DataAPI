@@ -9,7 +9,7 @@ export default class Js5Compression {
         const len: number = buf.g4();
 
         if (len < 0) {
-            throw new Error();
+            throw new Error('Js5Compression: invalid length');
         } else if (type === 0) {
             const out: Int8Array = new Int8Array(len);
             out.set(src.subarray(buf.pos, buf.pos + len));
@@ -17,7 +17,7 @@ export default class Js5Compression {
         } else {
             const uncompressedLen: number = buf.g4();
             if (uncompressedLen < 0) {
-                throw new Error();
+                throw new Error('Js5Compression: invalid uncompressed length');
             }
 
             const out: Int8Array = new Int8Array(uncompressedLen);
@@ -25,8 +25,8 @@ export default class Js5Compression {
                 Bzip2Decompressor.bunzip(buf, out);
             } else if (type === 2) {
                 GzipDecompressor.gunzip(buf, out);
-            } else if (type === 3) {
-                console.error('TODO: lzma');
+            } else {
+                throw new Error('Js5Compression: unsupported compression type');
             }
 
             return out;

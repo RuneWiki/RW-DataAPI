@@ -9,13 +9,14 @@
     "#runewiki/*": "./src/runewiki/*"
   },
   "scripts": {
-    "start": "nodemon src/app.ts",
+    "start": "nodemon src/runewiki/web/app.ts",
     "test": "jest"
   },
   "author": "Pazaz",
   "license": "MIT",
   "dependencies": {
     "dotenv": "^16.4.1",
+    "fastify": "^4.26.0",
     "seek-bzip": "^2.0.0"
   },
   "devDependencies": {

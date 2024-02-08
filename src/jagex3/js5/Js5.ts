@@ -9,8 +9,12 @@ export default class Js5 {
     static RAISE_EXCEPTIONS: boolean = false;
 
     static async create(archive: number, openrs2: OpenRS2, prefetchAll: boolean = false): Promise<Js5> {
+        if (archive > openrs2.info.valid_indexes) {
+            throw new Error('Index does not exist for this cache');
+        }
+
         const src: Int8Array | null = await openrs2.getGroup(255, archive);
-        if (src === null) {
+        if (src === null || src.length == 0) {
             throw new Error(`Failed to download idx255 for archive ${archive}`);
         }
 
@@ -90,7 +94,28 @@ export default class Js5 {
         this.packed[group] = await this.openrs2.getGroup(this.archive, group);
     }
 
-    async fetchFile(file: number, group: number = 0, key: number[] | null = null): Promise<Int8Array | null> {
+    async readGroup(group: number = 0, key: number[] | null = null): Promise<Int8Array | null> {
+        if (!this.isGroupValid(group)) {
+            return null;
+        }
+
+        if (this.unpacked[group] == null || this.unpacked[group]![0] == null) {
+            let success: boolean = this.unpackGroup(group, key);
+            if (!success) {
+                await this.fetchGroup(group);
+
+                success = this.unpackGroup(group, key);
+                if (!success) {
+                    return null;
+                }
+            }
+        }
+
+        return this.unpacked[group]![0];
+    }
+
+    // preferred name is fetchFile but we can't overload in JS, and readGroup/readFile would be overloads...
+    async readFile(file: number, group: number = 0, key: number[] | null = null): Promise<Int8Array | null> {
         if (!this.isFileValid(group, file)) {
             return null;
         }
@@ -256,18 +281,18 @@ export default class Js5 {
             compressed = JagBuffer.unwrap(this.packed[group]!, false);
         } else {
             compressed = JagBuffer.unwrap(this.packed[group]!, true);
-
-            const buf: JagBuffer = new JagBuffer(compressed);
-            buf.tinydec(key);
+            const buf: JagBuffer = JagBuffer.wrap(compressed);
+            buf.tinydec(key, 5, buf.length);
+            compressed = buf.data;
         }
 
         let uncompressed: Int8Array = new Int8Array();
         try {
             uncompressed = Js5Compression.uncompress(compressed);
         } catch (err) {
-            console.error('T3 - ' + (key != null) + ',' + group + ',' + compressed.length);
-            console.error(err);
-            uncompressed = new Int8Array(1);
+            // console.error('T3 - ' + (key != null) + ',' + group + ',' + compressed.length);
+            // console.error(err);
+            return false;
         }
 
         this.packed[group] = null;

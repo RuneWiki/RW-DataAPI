@@ -1,6 +1,16 @@
 export default class JagBuffer {
     static textDecoder = new TextDecoder('utf-8');
 
+    static wrap(src: Int8Array | JagBuffer): JagBuffer {
+        if (src instanceof JagBuffer) {
+            src = src.data;
+        }
+
+        const buf: JagBuffer = new JagBuffer(src);
+        buf.pos = src.length;
+        return buf;
+    }
+
     static unwrap(src: Int8Array | JagBuffer, copy: boolean): Int8Array {
         if (src instanceof JagBuffer) {
             src = src.data;
@@ -251,25 +261,35 @@ export default class JagBuffer {
         this.pos = start;
     }
 
-    tinydec(key: number[]): void {
-        const blocks: number = Math.floor(this.pos / 8);
-        this.pos = 0;
+    tinydec(key: number[], offset: number, length: number): void {
+        const start: number = this.pos;
 
+        const blocks: number = Math.trunc((length - offset) / 8);
+        this.pos = offset;
+
+        const delta: number = 0x9E3779B9;
         for (let i: number = 0; i < blocks; i++) {
             let v0: number = this.g4();
             let v1: number = this.g4();
-            let sum: number = 0xC6EF3720;
-
             let num_rounds: number = 32;
+            let sum: number = delta * num_rounds;
+
             while (num_rounds-- > 0) {
-				v1 -= ((v0 >>> 5 ^ v0 << 4) + v0 ^ sum - -key[sum >>> 11 & 0x3]) | 0;
-                sum = (sum - 0x9E3779B9) | 0;
-				v0 -= (sum + key[sum & 0x3] ^ v1 + (v1 << 4 ^ v1 >>> 5)) | 0;
+				v1 -= (((v0 << 4) ^ (v0 >>> 5)) + v0) ^ (sum + key[(sum >>> 11) & 0x3]);
+                v1 = v1 >>> 0; // js
+
+                sum -= delta;
+                sum = sum >>> 0; // js
+
+                v0 -= (((v1 << 4) ^ (v1 >>> 5)) + v1) ^ (sum + key[sum & 0x3]);
+                v0 = v0 >>> 0; // js
             }
 
             this.pos -= 8;
             this.p4(v0);
             this.p4(v1);
         }
+
+        this.pos = start;
     }
 }
