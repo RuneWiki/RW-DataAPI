@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import JagBuffer from '#jagex3/io/JagBuffer.js';
+import JagFile from '#jagex3/io/JagFile.js';
 import Js5 from '#jagex3/js5/Js5.js';
 import { OpenRS2 } from '#runewiki/util/OpenRS2.js';
 
@@ -87,6 +89,29 @@ export default function (f: any, opts: any, next: any): void {
                 res.header('Content-Disposition', `attachment; filename=${archive}.${group}.dat`);
                 return data;
             }
+        }
+    });
+
+    f.get('/jag/:archive/:file?', async (req: any, res: any): Promise<any> => {
+        const openrs2: OpenRS2 = await OpenRS2.find(req.query);
+
+        const data: Int8Array | null = await openrs2.getGroup(0, req.params.archive);
+        if (data == null || data.length == 0) {
+            throw new Error('Archive not found');
+        }
+
+        const jag: JagFile = new JagFile(new JagBuffer(data));
+        if (typeof req.params.file === 'undefined') {
+            jag.data = new Int8Array();
+            return jag;
+        } else {
+            const file: Int8Array | null = jag.read(req.params.file);
+            if (file == null) {
+                throw new Error('File not found');
+            }
+
+            res.header('Content-Disposition', `attachment; filename=${req.params.file.toLowerCase()}`);
+            return file;
         }
     });
 
