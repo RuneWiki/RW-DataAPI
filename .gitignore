@@ -1,0 +1,6 @@
+node_modules/
+
+/out/
+/dump/
+
+/data/openrs2/
