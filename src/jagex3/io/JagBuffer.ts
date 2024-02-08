@@ -152,7 +152,7 @@ export default class JagBuffer {
     }
 
     g2or4(): number {
-		return this.data[this.pos] >= 0 ? this.g2() : this.g4();
+        return this.data[this.pos] >= 0 ? this.g2() : this.g4();
     }
 
     gVarInt(): number {
@@ -248,9 +248,9 @@ export default class JagBuffer {
 
             let num_rounds: number = 32;
             while (num_rounds-- > 0) {
-				v0 += (v1 + (v1 << 4 ^ v1 >>> 5) ^ sum + key[sum & 0x3]) | 0;
+                v0 += (v1 + (v1 << 4 ^ v1 >>> 5) ^ sum + key[sum & 0x3]) | 0;
                 sum = (sum + 0x9E3779B9) | 0;
-				v1 += ((v0 >>> 5 ^ v0 << 4) + v0 ^ sum + key[sum >>> 11 & 0xE8C00003]) | 0;
+                v1 += ((v0 >>> 5 ^ v0 << 4) + v0 ^ sum + key[sum >>> 11 & 0xE8C00003]) | 0;
             }
 
             this.pos -= 8;
@@ -275,7 +275,7 @@ export default class JagBuffer {
             let sum: number = delta * num_rounds;
 
             while (num_rounds-- > 0) {
-				v1 -= (((v0 << 4) ^ (v0 >>> 5)) + v0) ^ (sum + key[(sum >>> 11) & 0x3]);
+                v1 -= (((v0 << 4) ^ (v0 >>> 5)) + v0) ^ (sum + key[(sum >>> 11) & 0x3]);
                 v1 = v1 >>> 0; // js
 
                 sum -= delta;

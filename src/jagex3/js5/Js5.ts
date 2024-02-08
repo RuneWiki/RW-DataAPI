@@ -26,7 +26,7 @@ export default class Js5 {
         return js5;
     }
 
-    private index: Js5Index;
+    index: Js5Index;
     private archive: number;
     unpacked: (Int8Array[] | null)[] = [];
     packed: (Int8Array | null)[] = [];
@@ -95,11 +95,19 @@ export default class Js5 {
     }
 
     async readGroup(group: number = 0, key: number[] | null = null): Promise<Int8Array | null> {
-        if (!this.isGroupValid(group)) {
+        if (!this.isGroupValid(group) || !this.index.fileIds) {
             return null;
         }
 
-        if (this.unpacked[group] == null || this.unpacked[group]![0] == null) {
+        const fileIds: Int32Array | null = this.index.fileIds[group];
+        let fileId: number = 0;
+        if (fileIds === null) {
+            fileId = 0;
+        } else {
+            fileId = fileIds[0];
+        }
+
+        if (this.unpacked[group] == null || this.unpacked[group]![fileId] == null) {
             let success: boolean = this.unpackGroup(group, key);
             if (!success) {
                 await this.fetchGroup(group);
@@ -111,7 +119,7 @@ export default class Js5 {
             }
         }
 
-        return this.unpacked[group]![0];
+        return this.unpacked[group]![fileId];
     }
 
     // preferred name is fetchFile but we can't overload in JS, and readGroup/readFile would be overloads...
