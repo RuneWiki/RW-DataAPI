@@ -426,13 +426,13 @@ export default class LocType {
                             this.multiLocs[i] = -1;
                         }
                     }
-
-                    if (this.multiLocs[i] !== -1) {
-                        this.def.push(`multiloc=${i},loc_${this.multiLocs[i]}`);
-                    }
                 }
 
                 this.multiLocs[count + 1] = varbit;
+
+                for (let i: number = 0; i <= count + 1; i++) {
+                    this.def.push(`multiloc${i + 1}=loc_${this.multiLocs[i]}`);
+                }
             } else if (code === 78) {
                 this.bgsound = buf.g2();
                 this.bgsoundrange = buf.g1();
@@ -558,7 +558,7 @@ export default class LocType {
                 const byte2: number = buf.g1b();
                 const byte3: number = buf.g1b();
                 const byte4: number = buf.g1b();
-                this.def.push(`tiny=${byte1},${byte2},${byte3},${byte4}`);
+                this.def.push(`tint=${byte1},${byte2},${byte3},${byte4}`);
             } else if (code === 164) {
                 const int1: number = buf.g2s();
                 this.def.push(`postoffsetx=${int1}`);
