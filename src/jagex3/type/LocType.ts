@@ -200,20 +200,6 @@ export default class LocType {
                             }
                         }
                     }
-                } else if (openrs2.rev >= 300) {
-                    const count: number = buf.g1();
-                    this.models = new Int32Array(count);
-                    this.shapes = new Int32Array(count);
-
-                    for (let i: number = 0; i < count; i++) {
-                        this.models[i] = buf.g2();
-                        if (code === 1) {
-                            this.shapes[i] = buf.g1();
-                        } else {
-                            this.shapes[i] = 10;
-                        }
-                        this.def.push(`model=model_${this.models[i]}${LocShapeHotkey[this.shapes[i]]}`);
-                    }
                 } else {
                     const count: number = buf.g1();
 
