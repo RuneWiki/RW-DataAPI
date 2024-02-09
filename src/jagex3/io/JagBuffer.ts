@@ -103,6 +103,16 @@ export default class JagBuffer {
         return length === 0 ? '' : JagBuffer.textDecoder.decode(this.data.subarray(start, start + length));
     }
 
+    // gjstr + newline (10)
+    gjstrn(): string {
+        const start: number = this.pos;
+        while (this.data[this.pos++] !== 10 && this.pos < this.length) {
+            /* empty */
+        }
+        const length: number = this.pos - start - 1;
+        return length === 0 ? '' : JagBuffer.textDecoder.decode(this.data.subarray(start, start + length));
+    }
+
     fastgstr(): string | null {
         if (this.data[this.pos] === 0) {
             this.pos++;
