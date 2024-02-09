@@ -381,8 +381,6 @@ export default class LocType {
                 this.raiseobject = buf.g1();
                 this.def.push(`raiseobject=${this.raiseobject ? 'yes' : 'no'}`);
             } else if (code === 77 || code === 92) {
-                let varbit: number = -1;
-
                 this.multiLocVarbit = buf.g2();
                 if (this.multiLocVarbit === 65535) {
                     this.multiLocVarbit = -1;
@@ -401,21 +399,22 @@ export default class LocType {
                     this.def.push(`multivar=varp_${this.multiLocVarp}`);
                 }
 
+                let defaultMultiLoc: number = -1;
                 if (code === 92) {
                     if (openrs2.rev > 700) {
-                        varbit = buf.gSmart2or4();
+                        defaultMultiLoc = buf.gSmart2or4();
                     } else {
-                        varbit = buf.g2();
+                        defaultMultiLoc = buf.g2();
 
-                        if (varbit === 65535) {
-                            varbit = -1;
+                        if (defaultMultiLoc === 65535) {
+                            defaultMultiLoc = -1;
                         }
                     }
                 }
 
                 const count: number = buf.g1();
-
                 this.multiLocs = new Int32Array(count + 1);
+
                 for (let i: number = 0; i <= count; i++) {
                     if (openrs2.rev > 700) {
                         this.multiLocs[i] = buf.gSmart2or4();
@@ -428,10 +427,16 @@ export default class LocType {
                     }
                 }
 
-                this.multiLocs[count + 1] = varbit;
+                this.multiLocs[count + 1] = defaultMultiLoc;
 
-                for (let i: number = 0; i <= count + 1; i++) {
-                    this.def.push(`multiloc${i + 1}=loc_${this.multiLocs[i]}`);
+                if (defaultMultiLoc !== -1) {
+                    this.def.push(`defaultloc=loc_${defaultMultiLoc}`);
+                }
+
+                for (let i: number = 0; i <= count; i++) {
+                    if (this.multiLocs[i] !== -1) {
+                        this.def.push(`multiloc=${i},loc_${this.multiLocs[i]}`);
+                    }
                 }
             } else if (code === 78) {
                 this.bgsound = buf.g2();
