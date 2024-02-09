@@ -76,7 +76,8 @@ export default function (f: any, opts: any, next: any): void {
 
                     const file: Int8Array | null = await js5.readFile(fileId, groupId);
                     if (!file) {
-                        break;
+                        stream.push(`// cannot decode [loc_${id}]: missing group ${groupId} file ${fileId}\n\n`);
+                        continue;
                     }
 
                     try {
