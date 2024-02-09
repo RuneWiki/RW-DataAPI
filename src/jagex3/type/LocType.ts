@@ -552,7 +552,7 @@ export default class LocType {
                 const array: Int32Array = new Int32Array(count);
                 for (let i: number = 0; i < count; i++) {
                     array[i] = buf.g2();
-                    this.def.push(`code160_${i + 1}=${array[i]}`);
+                    this.def.push(`quest${i + 1}=quest_${array[i]}`);
                 }
             } else if (code === 162) {
                 this.hillskew = 3;
