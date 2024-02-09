@@ -174,7 +174,7 @@ export default class LocType {
                             this.highRevModels[i] = new Int32Array(modelCount);
                             for (let j: number = 0; j < modelCount; j++) {
                                 this.highRevModels[i][j] = buf.g2();
-                                this.def.push(`model=model_${this.highRevModels[i][j]}${LocShapeHotkey[this.shapes[i]]}`);
+                                this.def.push(`ldmodel=model_${this.highRevModels[i][j]}${LocShapeHotkey[this.shapes[i]]}`);
                             }
                         }
                     }
@@ -192,26 +192,44 @@ export default class LocType {
                             this.highRevModels[i] = new Int32Array(modelCount);
                             for (let j: number = 0; j < modelCount; j++) {
                                 this.highRevModels[i][j] = buf.g2();
-                                this.def.push(`membermodel=model_${this.highRevModels[i][j]}${LocShapeHotkey[this.shapes[i]]}`);
+                                this.def.push(`model=model_${this.highRevModels[i][j]}${LocShapeHotkey[this.shapes[i]]}`);
                             }
                         }
                     }
-                } else {
-                    const count: number = buf.g1();
-                    this.models = new Int32Array(count);
-                    this.shapes = new Int32Array(count);
 
+                } else {
                     // jagex only needs a single model= property and doesn't have to specify the shape
                     // as it gets derived from the available model on the filesystem with specific suffixes
                     // since we're representing unorganized data, we have to include it in the full definition
-                    for (let i: number = 0; i < count; i++) {
-                        this.models[i] = buf.g2();
-                        if (code === 1) {
-                            this.shapes[i] = buf.g1();
-                        } else {
-                            this.shapes[i] = 10;
+
+                    const count: number = buf.g1();
+
+                    if (this.models == null) {
+                        this.models = new Int32Array(count);
+                        this.shapes = new Int32Array(count);
+
+                        for (let i: number = 0; i < count; i++) {
+                            this.models[i] = buf.g2();
+                            if (code === 1) {
+                                this.shapes[i] = buf.g1();
+                            } else {
+                                this.shapes[i] = 10;
+                            }
+                            this.def.push(`model=model_${this.models[i]}${LocShapeHotkey[this.shapes[i]]}`);
                         }
-                        this.def.push(`model=model_${this.models[i]}${LocShapeHotkey[this.shapes[i]]}`);
+                    } else {
+                        this.models = new Int32Array(count);
+                        this.shapes = new Int32Array(count);
+
+                        for (let i: number = 0; i < count; i++) {
+                            this.models[i] = buf.g2();
+                            if (code === 1) {
+                                this.shapes[i] = buf.g1();
+                            } else {
+                                this.shapes[i] = 10;
+                            }
+                            this.def.push(`ldmodel=model_${this.models[i]}${LocShapeHotkey[this.shapes[i]]}`);
+                        }
                     }
                 }
             } else if (code === 2) {
