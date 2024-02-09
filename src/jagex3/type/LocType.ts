@@ -111,9 +111,9 @@ export default class LocType {
     bgsoundmax: number = 0;
     bgsounds: Int32Array | null = null;
     hillskewAmount: number = 0;
-    render: boolean = false;
-    castshadow: boolean = true;
-    allowrandomizedanimation: boolean = true;
+    code82: boolean = false;
+    hardshadow: boolean = true;
+    randseq: boolean = true;
     members: boolean = false;
     hasAnimation: boolean = false;
     mapSceneRotated: boolean = false;
@@ -324,7 +324,7 @@ export default class LocType {
                 const array: Int8Array = new Int8Array(count);
                 for (let i: number = 0; i < count; i++) {
                     array[i] = buf.g1b();
-                    this.def.push(`code42${i + 1}s=${array[i]}`);
+                    this.def.push(`recol${i + 1}dpalette=${array[i]}`);
                 }
             } else if (code === 60) {
                 this.mapfunction = buf.g2();
@@ -436,29 +436,32 @@ export default class LocType {
             } else if (code === 78) {
                 this.bgsound = buf.g2();
                 this.bgsoundrange = buf.g1();
+                this.def.push(`bgsound=sound_${this.bgsound},${this.bgsoundrange}`);
             } else if (code === 79) {
                 this.bgsoundmin = buf.g2();
                 this.bgsoundmax = buf.g2();
                 this.bgsoundrange = buf.g1();
+                this.def.push(`randomsound=${this.bgsoundmin},${this.bgsoundmax},${this.bgsoundrange}`);
 
                 const count: number = buf.g1();
                 this.bgsounds = new Int32Array(count);
                 for (let i: number = 0; i < count; i++) {
                     this.bgsounds[i] = buf.g2();
+                    this.def.push(`randomsound${i + 1}=sound_${this.bgsound}`);
                 }
             } else if (code === 81) {
                 this.hillskew = 2;
                 this.hillskewAmount = buf.g1();
-                this.def.push(`sethillskew=${this.hillskewAmount}`);
+                this.def.push(`treeskew=${this.hillskewAmount}`);
             } else if (code === 82) {
-                this.render = true;
-                this.def.push('render=yes');
+                this.code82 = true;
+                this.def.push('code82=yes');
             } else if (code === 88) {
-                this.castshadow = false;
-                this.def.push('castshadow=no');
+                this.hardshadow = false;
+                this.def.push('hardshadow=no');
             } else if (code === 89) {
-                this.allowrandomizedanimation = false;
-                this.def.push('allowrandomizedanimation=no');
+                this.randseq = false;
+                this.def.push('randseq=no');
             } else if (code === 90) {
                 this.def.push('code90=no');
             } else if (code === 91) {
@@ -467,24 +470,24 @@ export default class LocType {
             } else if (code === 93) {
                 this.hillskew = 3;
                 this.hillskewAmount = buf.g2();
-                this.def.push(`sethillskew=${this.hillskewAmount}`);
+                this.def.push(`rotateskew=${this.hillskewAmount}`);
             } else if (code === 94) {
                 this.hillskew = 4;
-                this.def.push('hillskew4=yes');
+                this.def.push('ceilingskew=yes');
             } else if (code === 95) {
                 this.hillskew = 5;
                 if (openrs2.rev >= 590) {
                     this.hillskewAmount = buf.g2s();
-                    this.def.push(`hillskew5=${this.hillskewAmount}`);
+                    this.def.push(`skewtofit=${this.hillskewAmount}`);
                 } else {
-                    this.def.push('hillskew5=yes');
+                    this.def.push('skewtofit=yes');
                 }
             } else if (code === 96) {
                 this.hasAnimation = true;
-                this.def.push('hasAnimation=yes');
+                this.def.push('code96=yes');
             } else if (code === 97) {
                 this.mapSceneRotated = true;
-                this.def.push('mapSceneRotated=yes');
+                this.def.push('mapscenerotates=yes');
             } else if (code === 98) {
                 this.def.push('code98=yes');
             } else if (code === 99) {
@@ -497,7 +500,7 @@ export default class LocType {
                 this.def.push(`cursor2=op${this.cursor2Op + 1},cursor_${this.cursor2}`);
             } else if (code === 101) {
                 this.mapSceneAngleOffset = buf.g1();
-                this.def.push(`mapSceneAngleOffset=${this.mapSceneAngleOffset}`);
+                this.def.push(`mapsceneangle=${this.mapSceneAngleOffset}`);
             } else if (code === 102) {
                 this.mapscene = buf.g2();
                 this.def.push(`mapscene=${this.mapscene}`);
@@ -506,10 +509,10 @@ export default class LocType {
                 this.def.push('occlude=no');
             } else if (code === 104) {
                 this.soundVolume = buf.g1();
-                this.def.push(`soundVolume=${this.soundVolume}`);
+                this.def.push(`bgsoundvol=${this.soundVolume}`);
             } else if (code === 105) {
                 this.mapSceneFlipVertical = true;
-                this.def.push('mapSceneFlipVertical=yes');
+                this.def.push('mapsceneflipy=yes');
             } else if (code === 106) {
                 const count: number = buf.g1();
                 this.seqWeights = new Int32Array(count);
@@ -526,11 +529,11 @@ export default class LocType {
                     this.seqWeights[i] = weight;
                     this.totalSeqWeight += weight;
 
-                    this.def.push(`weightedanim${i + 1}=${this.seqIds[i]},${weight}`);
+                    this.def.push(`anim${i + 1}=${this.seqIds[i]},${weight}`);
                 }
             } else if (code === 107) {
                 this.mapElement = buf.g2();
-                this.def.push(`mapElement=${this.mapElement}`);
+                this.def.push(`mel=mel_${this.mapElement}`);
             } else if (code >= 150 && code < 155) {
                 if (this.ops === null) {
                     this.ops = new Array(5);
@@ -549,44 +552,44 @@ export default class LocType {
             } else if (code === 162) {
                 this.hillskew = 3;
                 this.hillskewAmount = buf.g4();
-                this.def.push(`sethillskew=${this.hillskewAmount}`);
+                this.def.push(`rotateskew=${this.hillskewAmount}`);
             } else if (code === 163) {
                 const byte1: number = buf.g1b();
                 const byte2: number = buf.g1b();
                 const byte3: number = buf.g1b();
                 const byte4: number = buf.g1b();
-                this.def.push(`code163=${byte1},${byte2},${byte3},${byte4}`);
+                this.def.push(`tiny=${byte1},${byte2},${byte3},${byte4}`);
             } else if (code === 164) {
                 const int1: number = buf.g2s();
-                this.def.push(`code164=${int1}`);
+                this.def.push(`postoffsetx=${int1}`);
             } else if (code === 165) {
                 const int1: number = buf.g2s();
-                this.def.push(`code165=${int1}`);
+                this.def.push(`postoffsety=${int1}`);
             } else if (code === 166) {
                 const int1: number = buf.g2s();
-                this.def.push(`code166=${int1}`);
+                this.def.push(`postoffsetz=${int1}`);
             } else if (code === 167) {
                 const int1: number = buf.g2();
-                this.def.push(`code167=${int1}`);
+                this.def.push(`decorheight=${int1}`);
             } else if (code === 168) {
                 this.def.push('code168=yes');
             } else if (code === 169) {
                 this.def.push('code169=yes');
             } else if (code === 170) {
                 const int1: number = buf.gSmart1or2();
-                this.def.push(`code170=${int1}`);
+                this.def.push(`occludewidth=${int1}`);
             } else if (code === 171) {
                 const int1: number = buf.gSmart1or2();
-                this.def.push(`code171=${int1}`);
+                this.def.push(`occludeheight=${int1}`);
             } else if (code === 173) {
                 const int1: number = buf.g2();
                 const int2: number = buf.g2();
-                this.def.push(`code173=${int1},${int2}`);
+                this.def.push(`bgsoundrate=${int1},${int2}`);
             } else if (code === 177) {
                 this.def.push('code177=yes');
             } else if (code === 178) {
                 const int1: number = buf.g1();
-                this.def.push(`code178=${int1}`);
+                this.def.push(`bgsounddistance=${int1}`);
             } else if (code === 189) {
                 this.def.push('code189=yes');
             } else if (code === 249) {
