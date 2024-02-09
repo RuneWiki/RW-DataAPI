@@ -144,6 +144,10 @@ export default class LocType {
                 break;
             }
 
+            // jagex only needs a single model= property and doesn't have to specify the shape
+            // as it gets derived from the available model on the filesystem with specific suffixes
+            // since we're representing unorganized data, we have to include it in the full definition
+
             if (code === 1 || code === 5) {
                 if (openrs2.rev >= 700) {
                     const count: number = buf.g1();
@@ -160,9 +164,9 @@ export default class LocType {
                             this.def.push(`model=model_${this.highRevModels[i][j]}${LocShapeHotkey[this.shapes[i]]}`);
                         }
                     }
-                } else if (openrs2.rev >= 590) {
-                    // free?
-                    {
+                } else if (openrs2.rev >= 581) {
+                    // lowmem
+                    if (code == 5) {
                         const count: number = buf.g1();
                         this.shapes = new Int32Array(count);
                         this.highRevModels = new Array(count);
@@ -179,7 +183,7 @@ export default class LocType {
                         }
                     }
 
-                    // members?
+                    // standard
                     {
                         const count: number = buf.g1();
                         this.shapes = new Int32Array(count);
@@ -196,12 +200,21 @@ export default class LocType {
                             }
                         }
                     }
+                } else if (openrs2.rev >= 300) {
+                    const count: number = buf.g1();
+                    this.models = new Int32Array(count);
+                    this.shapes = new Int32Array(count);
 
+                    for (let i: number = 0; i < count; i++) {
+                        this.models[i] = buf.g2();
+                        if (code === 1) {
+                            this.shapes[i] = buf.g1();
+                        } else {
+                            this.shapes[i] = 10;
+                        }
+                        this.def.push(`model=model_${this.models[i]}${LocShapeHotkey[this.shapes[i]]}`);
+                    }
                 } else {
-                    // jagex only needs a single model= property and doesn't have to specify the shape
-                    // as it gets derived from the available model on the filesystem with specific suffixes
-                    // since we're representing unorganized data, we have to include it in the full definition
-
                     const count: number = buf.g1();
 
                     if (this.models == null) {
@@ -499,7 +512,7 @@ export default class LocType {
                 this.def.push('ceilingskew=yes');
             } else if (code === 95) {
                 this.hillskew = 5;
-                if (openrs2.rev >= 590) {
+                if (openrs2.rev >= 600) {
                     this.hillskewAmount = buf.g2s();
                     this.def.push(`skewtofit=${this.hillskewAmount}`);
                 } else {
@@ -664,14 +677,5 @@ export default class LocType {
 
         out.push(...this.def);
         out.push('');
-    }
-
-    private skipModels(buf: JagBuffer): void {
-        const count: number = buf.g1();
-        for (let i: number = 0; i < count; i++) {
-            buf.pos++;
-            const modelCount: number = buf.g1();
-            buf.pos += modelCount * 2;
-        }
     }
 }
