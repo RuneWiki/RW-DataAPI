@@ -96,12 +96,12 @@ export default class LocType {
     resizez: number = 128;
     mapscene: number = -1;
     forceapproach: number = -1;
-    xoff: number = 0;
-    yoff: number = 0;
-    zoff: number = 0;
+    offsetx: number = 0;
+    offsety: number = 0;
+    offsetz: number = 0;
     forcedecor: boolean = false;
     breakroutefinding: boolean = false;
-    supportitems: number = -1;
+    raiseobject: number = -1;
     multiLocVarbit: number = -1;
     multiLocVarp: number = -1;
     multiLocs: Int32Array | null = null;
@@ -270,7 +270,7 @@ export default class LocType {
                 this.def.push('hasalpha=yes');
             } else if (code === 27) {
                 this.blockwalk = 1;
-                this.def.push('blockwalk=mode1');
+                this.def.push('blockwalk=yes');
             } else if (code === 28) {
                 this.walloff = buf.g1();
                 this.def.push(`walloff=${this.walloff}`);
@@ -363,14 +363,14 @@ export default class LocType {
                     this.def.push('forceapproach=left');
                 }
             } else if (code === 70) {
-                this.xoff = buf.g2s();
-                this.def.push(`xoff=${this.xoff}`);
+                this.offsetx = buf.g2s();
+                this.def.push(`offsetx=${this.offsetx}`);
             } else if (code === 71) {
-                this.yoff = buf.g2s();
-                this.def.push(`yoff=${this.yoff}`);
+                this.offsety = buf.g2s();
+                this.def.push(`offsety=${this.offsety}`);
             } else if (code === 72) {
-                this.zoff = buf.g2s();
-                this.def.push(`zoff=${this.zoff}`);
+                this.offsetz = buf.g2s();
+                this.def.push(`offsetz=${this.offsetz}`);
             } else if (code === 73) {
                 this.forcedecor = true;
                 this.def.push('forcedecor=yes');
@@ -378,8 +378,8 @@ export default class LocType {
                 this.breakroutefinding = true;
                 this.def.push('breakroutefinding=yes');
             } else if (code === 75) {
-                this.supportitems = buf.g1();
-                this.def.push(`supportitems=${this.supportitems}`);
+                this.raiseobject = buf.g1();
+                this.def.push(`raiseobject=${this.raiseobject ? 'yes' : 'no'}`);
             } else if (code === 77 || code === 92) {
                 let varbit: number = -1;
 
