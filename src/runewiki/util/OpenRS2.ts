@@ -117,6 +117,10 @@ export class OpenRS2 {
         return this.info.builds.length > 0 ? this.info.builds[0].major : -1;
     }
 
+    isOldEngine(): boolean {
+        return this.game === 'runescape' && this.rev < 400;
+    }
+
     async getKeys(): Promise<unknown | null> {
         return downloadJson(`${this.url}/keys.json`, `data/openrs2/${this.id}/keys.json`);
     }

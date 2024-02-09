@@ -152,13 +152,13 @@ export default class JagBuffer {
         return local5 + local9;
     }
 
-    gSmart4orNull(): number {
+    gSmart2or4(): number {
         if (this.data[this.pos] < 0) {
-            return this.g4();
-        } else {
-            const value: number = this.g2();
-            return value === 32767 ? -1 : value;
+            return this.g4() & 0x7FFFFFFF;
         }
+
+        const value: number = this.g2();
+        return value === 32767 ? -1 : value;
     }
 
     g2or4(): number {

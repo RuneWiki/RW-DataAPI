@@ -1,4 +1,7 @@
+import fs from 'fs';
+
 import JagBuffer from '#jagex3/io/JagBuffer.js';
+import { OpenRS2 } from '#runewiki/util/OpenRS2.js';
 
 enum LocShape {
     wall_straight = 0,
@@ -63,6 +66,7 @@ export default class LocType {
 
     models: Int32Array | null = null;
     shapes: Int32Array | null = null;
+    highRevModels: Int32Array[] | null = null;
     name: string | null = null;
     ops: string[] | null = null;
     width: number = 1;
@@ -72,7 +76,7 @@ export default class LocType {
     active: number = -1;
     hillskew: number = 0;
     sharelight: boolean = false;
-    occlude: boolean = false;
+    occlude: number = -1;
     anim: number = -1;
     disposeAlpha: boolean = false;
     walloff: number = 16;
@@ -84,6 +88,7 @@ export default class LocType {
     retex_s: Int32Array | null = null;
     retex_d: Int32Array | null = null;
     mapfunction: number = -1;
+    category: number = -1;
     mirror: boolean = false;
     shadow: boolean = true;
     resizex: number = 128;
@@ -109,55 +114,117 @@ export default class LocType {
     render: boolean = false;
     castshadow: boolean = true;
     allowrandomizedanimation: boolean = true;
-    aBoolean211: boolean = true;
     members: boolean = false;
     hasAnimation: boolean = false;
     mapSceneRotated: boolean = false;
-    aBoolean214: boolean = false;
     cursor1Op: number = -1;
     cursor1: number = -1;
     cursor2Op: number = -1;
     cursor2: number = -1;
     mapSceneAngleOffset: number = 0;
+    soundVolume: number = 255;
+    mapSceneFlipVertical: boolean = false;
+    seqWeights: Int32Array | null = null;
+    seqIds: Int32Array | null = null;
+    totalSeqWeight: number = 0;
+    mapElement: number = -1;
     params: Map<number, string | number> | null = null;
 
-    constructor(id: number, buf: JagBuffer) {
+    constructor(id: number, buf: JagBuffer, openrs2: OpenRS2) {
         this.id = id;
-        this.decode(buf);
+        this.decode(buf, openrs2);
     }
 
-    decode(buf: JagBuffer): void {
+    decode(buf: JagBuffer, openrs2: OpenRS2): void {
+        let lastCode: number = -1;
+
         while (buf.pos < buf.length) {
             const code: number = buf.g1();
             if (code === 0) {
                 break;
             }
 
-            if (code === 1) {
-                const count: number = buf.g1();
-                this.models = new Int32Array(count);
-                this.shapes = new Int32Array(count);
+            if (code === 1 || code === 5) {
+                if (openrs2.rev >= 700) {
+                    const count: number = buf.g1();
+                    this.shapes = new Int32Array(count);
+                    this.highRevModels = new Array(count);
 
-                // jagex only needs a single model= property and doesn't have to specify the shape
-                // as it gets derived from the available model on the filesystem with specific suffixes
-                // since we're representing unorganized data, we have to include it in the full definition
-                for (let i: number = 0; i < count; i++) {
-                    this.models[i] = buf.g2();
-                    this.shapes[i] = buf.g1();
-                    this.def.push(`model=model_${this.models[i]}${LocShapeHotkey[this.shapes[i]]}`);
+                    for (let i: number = 0; i < count; i++) {
+                        this.shapes[i] = buf.g1();
+
+                        const modelCount: number = buf.g1();
+                        this.highRevModels[i] = new Int32Array(modelCount);
+                        for (let j: number = 0; j < modelCount; j++) {
+                            this.highRevModels[i][j] = buf.gSmart2or4();
+                            this.def.push(`model=model_${this.highRevModels[i][j]}${LocShapeHotkey[this.shapes[i]]}`);
+                        }
+                    }
+                } else if (openrs2.rev >= 590) {
+                    // free?
+                    {
+                        const count: number = buf.g1();
+                        this.shapes = new Int32Array(count);
+                        this.highRevModels = new Array(count);
+
+                        for (let i: number = 0; i < count; i++) {
+                            this.shapes[i] = buf.g1();
+
+                            const modelCount: number = buf.g1();
+                            this.highRevModels[i] = new Int32Array(modelCount);
+                            for (let j: number = 0; j < modelCount; j++) {
+                                this.highRevModels[i][j] = buf.g2();
+                                this.def.push(`model=model_${this.highRevModels[i][j]}${LocShapeHotkey[this.shapes[i]]}`);
+                            }
+                        }
+                    }
+
+                    // members?
+                    {
+                        const count: number = buf.g1();
+                        this.shapes = new Int32Array(count);
+                        this.highRevModels = new Array(count);
+
+                        for (let i: number = 0; i < count; i++) {
+                            this.shapes[i] = buf.g1();
+
+                            const modelCount: number = buf.g1();
+                            this.highRevModels[i] = new Int32Array(modelCount);
+                            for (let j: number = 0; j < modelCount; j++) {
+                                this.highRevModels[i][j] = buf.g2();
+                                this.def.push(`membermodel=model_${this.highRevModels[i][j]}${LocShapeHotkey[this.shapes[i]]}`);
+                            }
+                        }
+                    }
+                } else {
+                    const count: number = buf.g1();
+                    this.models = new Int32Array(count);
+                    this.shapes = new Int32Array(count);
+
+                    // jagex only needs a single model= property and doesn't have to specify the shape
+                    // as it gets derived from the available model on the filesystem with specific suffixes
+                    // since we're representing unorganized data, we have to include it in the full definition
+                    for (let i: number = 0; i < count; i++) {
+                        this.models[i] = buf.g2();
+                        if (code === 1) {
+                            this.shapes[i] = buf.g1();
+                        } else {
+                            this.shapes[i] = 10;
+                        }
+                        this.def.push(`model=model_${this.models[i]}${LocShapeHotkey[this.shapes[i]]}`);
+                    }
                 }
             } else if (code === 2) {
-                this.name = buf.gjstrn();
+                if (openrs2.isOldEngine()) {
+                    this.name = buf.gjstrn();
+                } else {
+                    this.name = buf.gjstr();
+                }
             } else if (code === 3) {
-                this.desc = buf.gjstrn();
-            } else if (code === 5) {
-                const count: number = buf.g1();
-                this.models = new Int32Array(count);
-                this.shapes = null;
-
-                for (let i: number = 0; i < count; i++) {
-                    this.models[i] = buf.g2();
-                    this.def.push(`model=model_${this.models[i]}_8`);
+                if (openrs2.isOldEngine()) {
+                    this.desc = buf.gjstrn();
+                } else {
+                    this.desc = buf.gjstr();
                 }
             } else if (code === 14) {
                 this.width = buf.g1();
@@ -167,6 +234,7 @@ export default class LocType {
                 this.def.push(`length=${this.length}`);
             } else if (code === 17) {
                 this.blockwalk = 0;
+                this.blockrange = false;
                 this.def.push('blockwalk=no');
             } else if (code === 18) {
                 this.blockrange = false;
@@ -181,13 +249,20 @@ export default class LocType {
                 this.sharelight = true;
                 this.def.push('sharelight=yes');
             } else if (code === 23) {
-                this.occlude = true;
+                this.occlude = 1;
                 this.def.push('occlude=yes');
             } else if (code === 24) {
-                this.anim = buf.g2();
-                if (this.anim === 65535) {
-                    this.anim = -1;
+                if (openrs2.rev > 700) {
+                    this.anim = buf.gSmart2or4();
                 } else {
+                    this.anim = buf.g2();
+
+                    if (this.anim === 65535) {
+                        this.anim = -1;
+                    }
+                }
+
+                if (this.anim !== -1) {
                     this.def.push(`anim=seq_${this.anim}`);
                 }
             } else if (code === 25) {
@@ -195,7 +270,7 @@ export default class LocType {
                 this.def.push('hasalpha=yes');
             } else if (code === 27) {
                 this.blockwalk = 1;
-                // todo
+                this.def.push('blockwalk=mode1');
             } else if (code === 28) {
                 this.walloff = buf.g1();
                 this.def.push(`walloff=${this.walloff}`);
@@ -210,7 +285,12 @@ export default class LocType {
                     this.ops = new Array(5);
                 }
 
-                this.ops[code - 30] = buf.gjstrn();
+                if (openrs2.isOldEngine()) {
+                    this.ops[code - 30] = buf.gjstrn();
+                } else {
+                    this.ops[code - 30] = buf.gjstr();
+                }
+
                 this.def.push(`op${code - 29}=${this.ops[code - 30]}`);
             } else if (code === 40) {
                 const count: number = buf.g1();
@@ -238,9 +318,20 @@ export default class LocType {
                     this.def.push(`retex${i + 1}s=${this.retex_s[i]}`);
                     this.def.push(`retex${i + 1}d=${this.retex_d[i]}`);
                 }
+            } else if (code === 42) {
+                const count: number = buf.g1();
+
+                const array: Int8Array = new Int8Array(count);
+                for (let i: number = 0; i < count; i++) {
+                    array[i] = buf.g1b();
+                    this.def.push(`code42${i + 1}s=${array[i]}`);
+                }
             } else if (code === 60) {
                 this.mapfunction = buf.g2();
                 this.def.push(`mapfunction=${this.mapfunction}`);
+            } else if (code === 61) {
+                this.category = buf.g2();
+                this.def.push(`category=category_${this.category}`);
             } else if (code === 62) {
                 this.mirror = true;
                 this.def.push('mirror=yes');
@@ -295,22 +386,30 @@ export default class LocType {
                 this.multiLocVarbit = buf.g2();
                 if (this.multiLocVarbit === 65535) {
                     this.multiLocVarbit = -1;
-                } else {
+                }
+
+                if (this.multiLocVarbit !== -1) {
                     this.def.push(`multivarbit=varbit_${this.multiLocVarbit}`);
                 }
 
                 this.multiLocVarp = buf.g2();
                 if (this.multiLocVarp === 65535) {
                     this.multiLocVarp = -1;
-                } else {
+                }
+
+                if (this.multiLocVarp !== -1) {
                     this.def.push(`multivar=varp_${this.multiLocVarp}`);
                 }
 
                 if (code === 92) {
-                    varbit = buf.g2();
+                    if (openrs2.rev > 700) {
+                        varbit = buf.gSmart2or4();
+                    } else {
+                        varbit = buf.g2();
 
-                    if (varbit === 65535) {
-                        varbit = -1;
+                        if (varbit === 65535) {
+                            varbit = -1;
+                        }
                     }
                 }
 
@@ -318,11 +417,17 @@ export default class LocType {
 
                 this.multiLocs = new Int32Array(count + 1);
                 for (let i: number = 0; i <= count; i++) {
-                    this.multiLocs[i] = buf.g2();
-
-                    if (this.multiLocs[i] === 65535) {
-                        this.multiLocs[i] = -1;
+                    if (openrs2.rev > 700) {
+                        this.multiLocs[i] = buf.gSmart2or4();
                     } else {
+                        this.multiLocs[i] = buf.g2();
+
+                        if (this.multiLocs[i] === 65535) {
+                            this.multiLocs[i] = -1;
+                        }
+                    }
+
+                    if (this.multiLocs[i] !== -1) {
                         this.def.push(`multiloc=${i},loc_${this.multiLocs[i]}`);
                     }
                 }
@@ -355,8 +460,7 @@ export default class LocType {
                 this.allowrandomizedanimation = false;
                 this.def.push('allowrandomizedanimation=no');
             } else if (code === 90) {
-                this.aBoolean211 = false;
-                this.def.push('aBoolean211=no');
+                this.def.push('code90=no');
             } else if (code === 91) {
                 this.members = true;
                 this.def.push('members=yes');
@@ -369,7 +473,12 @@ export default class LocType {
                 this.def.push('hillskew4=yes');
             } else if (code === 95) {
                 this.hillskew = 5;
-                this.def.push('hillskew5=yes');
+                if (openrs2.rev >= 590) {
+                    this.hillskewAmount = buf.g2s();
+                    this.def.push(`hillskew5=${this.hillskewAmount}`);
+                } else {
+                    this.def.push('hillskew5=yes');
+                }
             } else if (code === 96) {
                 this.hasAnimation = true;
                 this.def.push('hasAnimation=yes');
@@ -377,22 +486,109 @@ export default class LocType {
                 this.mapSceneRotated = true;
                 this.def.push('mapSceneRotated=yes');
             } else if (code === 98) {
-                this.aBoolean214 = true;
-                this.def.push('aBoolean214=yes');
+                this.def.push('code98=yes');
             } else if (code === 99) {
                 this.cursor1Op = buf.g1();
                 this.cursor1 = buf.g2();
-                this.def.push(`cursor1=${this.cursor1},${this.cursor1Op}`);
+                this.def.push(`cursor1=op${this.cursor1Op + 1},cursor_${this.cursor1}`);
             } else if (code === 100) {
                 this.cursor2Op = buf.g1();
                 this.cursor2 = buf.g2();
-                this.def.push(`cursor2=${this.cursor2},${this.cursor2Op}`);
+                this.def.push(`cursor2=op${this.cursor2Op + 1},cursor_${this.cursor2}`);
             } else if (code === 101) {
                 this.mapSceneAngleOffset = buf.g1();
                 this.def.push(`mapSceneAngleOffset=${this.mapSceneAngleOffset}`);
             } else if (code === 102) {
                 this.mapscene = buf.g2();
                 this.def.push(`mapscene=${this.mapscene}`);
+            } else if (code === 103) {
+                this.occlude = 0;
+                this.def.push('occlude=no');
+            } else if (code === 104) {
+                this.soundVolume = buf.g1();
+                this.def.push(`soundVolume=${this.soundVolume}`);
+            } else if (code === 105) {
+                this.mapSceneFlipVertical = true;
+                this.def.push('mapSceneFlipVertical=yes');
+            } else if (code === 106) {
+                const count: number = buf.g1();
+                this.seqWeights = new Int32Array(count);
+                this.seqIds = new Int32Array(count);
+
+                for (let i: number = 0; i < count; i++) {
+                    if (openrs2.rev > 700) {
+                        this.seqIds[i] = buf.gSmart2or4();
+                    } else {
+                        this.seqIds[i] = buf.g2();
+                    }
+
+                    const weight: number = buf.g1();
+                    this.seqWeights[i] = weight;
+                    this.totalSeqWeight += weight;
+
+                    this.def.push(`weightedanim${i + 1}=${this.seqIds[i]},${weight}`);
+                }
+            } else if (code === 107) {
+                this.mapElement = buf.g2();
+                this.def.push(`mapElement=${this.mapElement}`);
+            } else if (code >= 150 && code < 155) {
+                if (this.ops === null) {
+                    this.ops = new Array(5);
+                }
+
+                this.ops[code - 150] = buf.gjstr();
+                this.def.push(`memberop${code - 149}=${this.ops[code - 150]}`);
+            } else if (code === 160) {
+                const count: number = buf.g1();
+
+                const array: Int32Array = new Int32Array(count);
+                for (let i: number = 0; i < count; i++) {
+                    array[i] = buf.g2();
+                    this.def.push(`code160_${i + 1}=${array[i]}`);
+                }
+            } else if (code === 162) {
+                this.hillskew = 3;
+                this.hillskewAmount = buf.g4();
+                this.def.push(`sethillskew=${this.hillskewAmount}`);
+            } else if (code === 163) {
+                const byte1: number = buf.g1b();
+                const byte2: number = buf.g1b();
+                const byte3: number = buf.g1b();
+                const byte4: number = buf.g1b();
+                this.def.push(`code163=${byte1},${byte2},${byte3},${byte4}`);
+            } else if (code === 164) {
+                const int1: number = buf.g2s();
+                this.def.push(`code164=${int1}`);
+            } else if (code === 165) {
+                const int1: number = buf.g2s();
+                this.def.push(`code165=${int1}`);
+            } else if (code === 166) {
+                const int1: number = buf.g2s();
+                this.def.push(`code166=${int1}`);
+            } else if (code === 167) {
+                const int1: number = buf.g2();
+                this.def.push(`code167=${int1}`);
+            } else if (code === 168) {
+                this.def.push('code168=yes');
+            } else if (code === 169) {
+                this.def.push('code169=yes');
+            } else if (code === 170) {
+                const int1: number = buf.gSmart1or2();
+                this.def.push(`code170=${int1}`);
+            } else if (code === 171) {
+                const int1: number = buf.gSmart1or2();
+                this.def.push(`code171=${int1}`);
+            } else if (code === 173) {
+                const int1: number = buf.g2();
+                const int2: number = buf.g2();
+                this.def.push(`code173=${int1},${int2}`);
+            } else if (code === 177) {
+                this.def.push('code177=yes');
+            } else if (code === 178) {
+                const int1: number = buf.g1();
+                this.def.push(`code178=${int1}`);
+            } else if (code === 189) {
+                this.def.push('code189=yes');
             } else if (code === 249) {
                 const count: number = buf.g1();
 
@@ -405,16 +601,26 @@ export default class LocType {
                     const key: number = buf.g3();
 
                     if (isString) {
-                        this.params.set(key, buf.gjstrn());
+                        if (openrs2.isOldEngine()) {
+                            this.params.set(key, buf.gjstrn());
+                        } else {
+                            this.params.set(key, buf.gjstr());
+                        }
                     } else {
                         this.params.set(key, buf.g4());
                     }
 
-                    this.def.push(`param=${key},${this.params.get(key)}`);
+                    this.def.push(`param=param_${key},${this.params.get(key)}`);
                 }
             } else {
-                throw new Error(`Error unrecognized config code ${code} while decoding loc ${this.id}`);
+                console.error(this.def, buf.pos.toString(16));
+                if (fs.existsSync('dump')) {
+                    fs.writeFileSync('dump/error.bin', buf.data);
+                }
+                throw new Error(`Error unrecognized config code ${code} while decoding loc ${this.id}, last code: ${lastCode}`);
             }
+
+            lastCode = code;
         }
     }
 
@@ -432,5 +638,14 @@ export default class LocType {
 
         out.push(...this.def);
         out.push('');
+    }
+
+    private skipModels(buf: JagBuffer): void {
+        const count: number = buf.g1();
+        for (let i: number = 0; i < count; i++) {
+            buf.pos++;
+            const modelCount: number = buf.g1();
+            buf.pos += modelCount * 2;
+        }
     }
 }
