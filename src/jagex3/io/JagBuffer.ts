@@ -162,7 +162,11 @@ export default class JagBuffer {
     }
 
     g2or4(): number {
-        return this.data[this.pos] >= 0 ? this.g2() : this.g4();
+        if (this.data[this.pos] < 0) {
+            return this.g4() & 0x7FFFFFFF;
+        }
+
+        return this.g2();
     }
 
     gVarInt(): number {
