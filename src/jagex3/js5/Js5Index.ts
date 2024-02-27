@@ -116,7 +116,11 @@ export default class Js5Index {
         }
 
         for (let i: number = 0; i < this.size; i++) {
-            this.groupSizes[this.groupIds[i]] = buf.g2();
+            if (protocol >= 7) {
+                this.groupSizes[this.groupIds[i]] = buf.g2or4();
+            } else {
+                this.groupSizes[this.groupIds[i]] = buf.g2();
+            }
         }
 
         for (let i: number = 0; i < this.size; i++) {
